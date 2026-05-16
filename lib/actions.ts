@@ -36,6 +36,28 @@ export async function logout() {
   await supabase.auth.signOut()
 }
 
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+
+export async function updateProfile(data: {
+  full_name?: string
+  role?: string
+  avatar_initials?: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/settings')
+  revalidatePath('/')
+  return { success: true }
+}
+
 // ── COMPANIES ─────────────────────────────────────────────────────────────────
 
 export async function createCompany(data: {

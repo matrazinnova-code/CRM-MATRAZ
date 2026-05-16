@@ -106,7 +106,8 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
 
       {/* Footer */}
       <div style={{ marginTop: 'auto' }}>
-        <div
+        <Link
+          href="/settings"
           style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: 10,
@@ -115,7 +116,12 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
             background: 'rgba(255,255,255,0.02)',
             cursor: 'pointer',
             marginBottom: 8,
+            textDecoration: 'none',
+            color: 'inherit',
+            transition: 'background 120ms',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,212,170,0.06)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
         >
           <div style={{
             width: 32, height: 32, borderRadius: '50%',
@@ -136,7 +142,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
           <span style={{ marginLeft: 'auto', color: 'var(--muted)', flexShrink: 0 }}>
             <IcChevRight size={14} />
           </span>
-        </div>
+        </Link>
 
         <button
           onClick={handleLogout}

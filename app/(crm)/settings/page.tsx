@@ -1,17 +1,30 @@
-import { IcSparkle } from '@/components/ui/Icons'
-import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import SettingsForm from '@/components/settings/SettingsForm'
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user!.id)
+    .single()
+
   return (
-    <div style={{ padding: '28px 32px 56px' }}>
-      <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 8 }}>Ajustes</div>
-      <div className="card" style={{ padding: 48, textAlign: 'center', marginTop: 24 }}>
-        <div style={{ display: 'inline-grid', placeItems: 'center', width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg, rgba(0,212,170,0.18) 0%, rgba(123,95,255,0.18) 100%)', color: 'var(--teal)', marginBottom: 16 }}>
-          <IcSparkle size={24} />
+    <div style={{ padding: '28px 32px 56px', maxWidth: 720 }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15 }}>Ajustes</div>
+        <div style={{ color: 'var(--muted)', fontSize: 13.5, marginTop: 6 }}>Gestiona tu perfil y preferencias</div>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', fontSize: 14, fontWeight: 600 }}>
+          Información de perfil
         </div>
-        <div style={{ fontSize: 16, fontWeight: 600 }}>Sección en construcción</div>
-        <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 6 }}>Esta sección estará disponible próximamente.</div>
-        <Link href="/" className="btn primary" style={{ marginTop: 18, display: 'inline-flex' }}>Volver al Dashboard</Link>
+        <div style={{ padding: '28px 24px' }}>
+          <SettingsForm profile={profile} email={user?.email ?? ''} />
+        </div>
       </div>
     </div>
   )
