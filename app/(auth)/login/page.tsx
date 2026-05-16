@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { useEffect, useTransition } from 'react'
+import { useFormState } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -8,7 +9,8 @@ import { login } from '@/lib/actions'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [state, action, pending] = useActionState(login, null)
+  const [pending, startTransition] = useTransition()
+  const [state, action] = useFormState(login, null)
 
   useEffect(() => {
     if (state?.success) router.replace('/')
@@ -37,7 +39,7 @@ export default function LoginPage() {
         Accede a tu cuenta de Matraz Innova CRM
       </p>
 
-      <form action={action} className="flex flex-col gap-4">
+      <form action={(fd) => startTransition(() => action(fd))} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <label className="field-label">Email</label>
           <input
