@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import Timeline from '@/components/contacts/Timeline'
+import EditContactButton from '@/components/contacts/EditContactButton'
 import { VerticalBadge, StatusBadge } from '@/components/ui/Badge'
 import {
   IcChevRight, IcBuilding, IcMail, IcPhone, IcMapPin, IcLinkedin,
@@ -60,6 +61,9 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
         <div>
           {/* Contact card */}
           <div className="card" style={{ padding: 22 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <EditContactButton contact={c} />
+            </div>
             <div style={{
               width: 76, height: 76, borderRadius: '50%', margin: '0 auto 14px',
               display: 'grid', placeItems: 'center',

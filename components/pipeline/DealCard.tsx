@@ -5,8 +5,16 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { VerticalBadge } from '@/components/ui/Badge'
 import { IcSparkle, IcMore, IcClock, IcCalendar } from '@/components/ui/Icons'
-import { deleteDeal } from '@/lib/actions'
-import type { Deal } from '@/lib/supabase/database.types'
+import { deleteDeal, updateDeal } from '@/lib/actions'
+import type { Deal, Vertical, DealStage } from '@/lib/supabase/database.types'
+
+const STAGES: DealStage[] = ['lead','qualified','proposal','negotiation','closing','won','lost']
+const VERTICALS: Vertical[] = ['healthcare','it','business']
+
+const iStyle: React.CSSProperties = {
+  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+  borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#fff', outline: 'none', boxSizing: 'border-box',
+}
 
 interface Props {
   deal: Deal
@@ -17,8 +25,19 @@ interface Props {
 export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: deal.id })
   const [menuOpen, setMenuOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // Edit form state
+  const [eTitle,   setETitle]   = useState(deal.title)
+  const [eValue,   setEValue]   = useState(String(deal.value))
+  const [eVertical,setEVertical]= useState<Vertical>(deal.vertical)
+  const [eStage,   setEStage]   = useState<DealStage>(deal.stage)
+  const [eProb,    setEProb]    = useState(String(deal.probability ?? 80))
+  const [eDate,    setEDate]    = useState(deal.close_date ?? '')
+  const [eDesc,    setEDesc]    = useState(deal.description ?? '')
+  const [editErr,  setEditErr]  = useState<string | null>(null)
 
   const style = isDragOverlay
     ? undefined
@@ -48,6 +67,25 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
     setMenuOpen(false)
     if (!confirm(`¿Eliminar "${deal.title}"?`)) return
     startTransition(() => deleteDeal(deal.id))
+  }
+
+  function handleEditSave() {
+    if (!eTitle.trim()) { setEditErr('El título es obligatorio'); return }
+    const val = parseFloat(eValue)
+    if (isNaN(val) || val < 0) { setEditErr('Valor no válido'); return }
+    setEditErr(null)
+    updateDeal(deal.id, {
+      title: eTitle.trim(),
+      value: val,
+      vertical: eVertical,
+      stage: eStage,
+      probability: parseInt(eProb) || 80,
+      close_date: eDate || undefined,
+      description: eDesc.trim() || undefined,
+    }).then((res) => {
+      if (res?.error) { setEditErr(res.error); return }
+      setEditOpen(false)
+    })
   }
 
   return (
@@ -82,9 +120,23 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
             <div style={{
               position: 'absolute', right: 0, top: '110%', zIndex: 50,
               background: 'var(--surface-2)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: '4px 0', minWidth: 140,
+              borderRadius: 10, padding: '4px 0', minWidth: 150,
               boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
             }}>
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setEditOpen(true) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  width: '100%', padding: '8px 14px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#fff', fontSize: 13, textAlign: 'left',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+              >
+                ✏️ Editar deal
+              </button>
               <button
                 disabled={isPending}
                 onPointerDown={(e) => e.stopPropagation()}
@@ -146,6 +198,79 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
           </>
         )}
       </div>
+
+      {/* Edit modal */}
+      {editOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setEditOpen(false)}
+        >
+          <div
+            style={{
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 16, padding: 28, width: 500, maxWidth: '95vw',
+              maxHeight: '90vh', overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Editar deal</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.1em', marginBottom: 5, textTransform: 'uppercase' }}>Título *</div>
+                <input style={iStyle} value={eTitle} onChange={(e) => setETitle(e.target.value)} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.1em', marginBottom: 5, textTransform: 'uppercase' }}>Valor (€)</div>
+                  <input style={iStyle} type="number" min="0" value={eValue} onChange={(e) => setEValue(e.target.value)} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.1em', marginBottom: 5, textTransform: 'uppercase' }}>Probabilidad (%)</div>
+                  <input style={iStyle} type="number" min="0" max="100" value={eProb} onChange={(e) => setEProb(e.target.value)} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.1em', marginBottom: 5, textTransform: 'uppercase' }}>Vertical</div>
+                  <select style={{ ...iStyle, cursor: 'pointer' }} value={eVertical} onChange={(e) => setEVertical(e.target.value as Vertical)}>
+                    {VERTICALS.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.1em', marginBottom: 5, textTransform: 'uppercase' }}>Etapa</div>
+                  <select style={{ ...iStyle, cursor: 'pointer' }} value={eStage} onChange={(e) => setEStage(e.target.value as DealStage)}>
+                    {STAGES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.1em', marginBottom: 5, textTransform: 'uppercase' }}>Fecha de cierre</div>
+                <input style={iStyle} type="date" value={eDate} onChange={(e) => setEDate(e.target.value)} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.1em', marginBottom: 5, textTransform: 'uppercase' }}>Descripción</div>
+                <textarea
+                  style={{ ...iStyle, resize: 'vertical', minHeight: 72, fontFamily: 'inherit' }}
+                  value={eDesc}
+                  onChange={(e) => setEDesc(e.target.value)}
+                />
+              </div>
+            </div>
+            {editErr && <div style={{ fontSize: 12, color: 'var(--magenta)', marginTop: 10 }}>{editErr}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 }}>
+              <button className="btn ghost" onClick={() => setEditOpen(false)}>Cancelar</button>
+              <button className="btn primary" onClick={() => startTransition(handleEditSave)} disabled={isPending}>
+                {isPending ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
