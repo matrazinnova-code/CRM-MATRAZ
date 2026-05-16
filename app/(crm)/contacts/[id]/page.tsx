@@ -35,8 +35,10 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
   if (!contact) notFound()
 
   const c = contact as Contact
-  const initials = c.name.split(' ').slice(0, 2).map((w) => w[0]).toUpperCase().join('')
-  const linkedinSlug = c.name.toLowerCase().replace(/\s+/g, '-')
+  const leadScore = c.lead_score ?? 0
+  const pipelineValue = c.pipeline_value ?? 0
+  const initials = (c.name ?? '?').split(' ').slice(0, 2).map((w: string) => w[0]).toUpperCase().join('')
+  const linkedinSlug = (c.name ?? '').toLowerCase().replace(/\s+/g, '-')
   const activeDeals = (deals ?? []).filter((d: Deal) => d.stage !== 'won' && d.stage !== 'lost')
 
   const STAGE_COLORS: Record<string, string> = {
@@ -111,11 +113,11 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
               Lead Score
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <div className="gradient-text" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1 }}>{c.lead_score}</div>
-              <div style={{ color: 'var(--muted)', fontSize: 12 }}>/ 100 · {c.lead_score >= 70 ? 'alto' : c.lead_score >= 40 ? 'medio' : 'bajo'}</div>
+              <div className="gradient-text" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1 }}>{leadScore}</div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>/ 100 · {leadScore >= 70 ? 'alto' : leadScore >= 40 ? 'medio' : 'bajo'}</div>
             </div>
             <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 99, marginTop: 12, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${c.lead_score}%`, background: 'var(--gradient)', borderRadius: 99 }} />
+              <div style={{ height: '100%', width: `${leadScore}%`, background: 'var(--gradient)', borderRadius: 99 }} />
             </div>
           </div>
 
@@ -145,7 +147,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
             {[
               {
                 label: 'Valor en pipeline',
-                value: `€${c.pipeline_value.toLocaleString('en-US')}`,
+                value: `€${pipelineValue.toLocaleString('en-US')}`,
                 sub: `${activeDeals.length} deal${activeDeals.length !== 1 ? 's' : ''} activos`,
               },
               {
