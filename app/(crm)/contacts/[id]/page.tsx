@@ -37,7 +37,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
   const c = contact as Contact
   const leadScore = c.lead_score ?? 0
   const pipelineValue = c.pipeline_value ?? 0
-  const initials = (c.name ?? '?').split(' ').slice(0, 2).map((w: string) => w[0]).toUpperCase().join('')
+  const initials = (c.name ?? '?').split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join('')
   const linkedinSlug = (c.name ?? '').toLowerCase().replace(/\s+/g, '-')
   const activeDeals = (deals ?? []).filter((d: Deal) => d.stage !== 'won' && d.stage !== 'lost')
 

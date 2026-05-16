@@ -44,20 +44,17 @@ export default function Timeline({ activities, contactId }: Props) {
 
   const handleAdd = () => {
     if (!title.trim()) return
-    startTransition(async () => {
-      setError(null)
-      const res = await createActivity({ kind, title: title.trim(), body: body.trim() || undefined, contact_id: contactId })
-      if (res.error) { setError(res.error); return }
-      setTitle(''); setBody(''); setShowForm(false)
-      router.refresh()
-    })
+    setError(null)
+    createActivity({ kind, title: title.trim(), body: body.trim() || undefined, contact_id: contactId })
+      .then((res) => {
+        if (res.error) { setError(res.error); return }
+        setTitle(''); setBody(''); setShowForm(false)
+        router.refresh()
+      })
   }
 
   const handleDelete = (id: string) => {
-    startTransition(async () => {
-      await deleteActivity(id, contactId)
-      router.refresh()
-    })
+    deleteActivity(id, contactId).then(() => router.refresh())
   }
 
   return (
