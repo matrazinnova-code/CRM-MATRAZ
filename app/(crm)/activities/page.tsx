@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import {
-  IcSparkle, IcMail, IcPhone, IcCalendar, IcBrief, IcPlus, IcDoc,
+  IcSparkle, IcMail, IcPhone, IcCalendar, IcBrief, IcPlus,
 } from '@/components/ui/Icons'
+import DateRangeFilter from '@/components/activities/DateRangeFilter'
 
 const KIND_META: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   call:    { label: 'Llamada',  color: '#00D4AA', icon: <IcPhone size={15} /> },
@@ -12,26 +14,34 @@ const KIND_META: Record<string, { label: string; color: string; icon: React.Reac
   note:    { label: 'Nota',    color: '#C0C0C8', icon: <IcSparkle size={15} /> },
 }
 
-export default async function ActivitiesPage() {
+export default async function ActivitiesPage({
+  searchParams,
+}: {
+  searchParams: { from?: string; to?: string }
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
+  const from = searchParams.from ?? ''
+  const to   = searchParams.to   ?? ''
+
+  let query = supabase
+    .from('activities')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (from) query = query.gte('created_at', `${from}T00:00:00`)
+  if (to)   query = query.lte('created_at', `${to}T23:59:59`)
+
   const [{ data: rawActs }, { data: contacts }] = await Promise.all([
-    supabase
-      .from('activities')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(100),
-    supabase
-      .from('contacts')
-      .select('id, name, vertical')
-      .eq('user_id', user.id),
+    query,
+    supabase.from('contacts').select('id, name, vertical').eq('user_id', user.id),
   ])
 
   const contactMap = Object.fromEntries((contacts ?? []).map((c) => [c.id, c]))
-
   const list = (rawActs ?? []).map((a) => ({
     ...a,
     contact: a.contact_id ? (contactMap[a.contact_id] ?? null) : null,
@@ -47,31 +57,30 @@ export default async function ActivitiesPage() {
     groups[day].push(a)
   }
 
+  const periodLabel = from || to
+    ? `${from ? `Desde ${from}` : ''}${from && to ? ' · ' : ''}${to ? `Hasta ${to}` : ''}`
+    : 'Todos los registros'
+
   return (
-    <div style={{ padding: '28px 32px 56px', maxWidth: 860 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 26 }}>
+    <div style={{ padding: '28px 32px 56px', maxWidth: 900 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em' }}>Actividades</div>
           <div style={{ color: 'var(--muted)', fontSize: 13.5, marginTop: 4 }}>
-            {list.length} eventos registrados
+            {list.length} eventos · <span style={{ color: from || to ? 'var(--teal)' : 'var(--muted-2)' }}>{periodLabel}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Link href="/actividades/informe" className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <IcDoc size={14} /> Ver informe
-          </Link>
-          <a
-            href="/api/export/activities"
-            download
-            className="btn"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-          >
-            <IcDoc size={14} /> Exportar CSV
-          </a>
-          <Link href="/contacts" className="btn primary" style={{ display: 'inline-flex' }}>
-            <IcPlus size={14} /> Nuevo registro
-          </Link>
-        </div>
+        <Link href="/contacts" className="btn primary" style={{ display: 'inline-flex', flexShrink: 0 }}>
+          <IcPlus size={14} /> Nuevo registro
+        </Link>
+      </div>
+
+      {/* Filters bar */}
+      <div className="card" style={{ padding: '14px 18px', marginBottom: 24 }}>
+        <Suspense fallback={null}>
+          <DateRangeFilter />
+        </Suspense>
       </div>
 
       {list.length === 0 ? (
@@ -83,13 +92,14 @@ export default async function ActivitiesPage() {
           }}>
             <IcCalendar size={24} />
           </div>
-          <div style={{ fontSize: 16, fontWeight: 600 }}>Sin actividades aún</div>
-          <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 6, maxWidth: 320, margin: '6px auto 0' }}>
-            Registra llamadas, emails o reuniones desde el perfil de un contacto.
+          <div style={{ fontSize: 16, fontWeight: 600 }}>
+            {from || to ? 'Sin actividades en este período' : 'Sin actividades aún'}
           </div>
-          <Link href="/contacts" className="btn primary" style={{ marginTop: 22, display: 'inline-flex' }}>
-            Ir a Contactos
-          </Link>
+          <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 6, maxWidth: 320, margin: '6px auto 0' }}>
+            {from || to
+              ? 'Prueba con un rango de fechas diferente.'
+              : 'Registra llamadas, emails o reuniones desde el perfil de un contacto.'}
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -117,7 +127,6 @@ export default async function ActivitiesPage() {
                         borderTop: idx === 0 ? 'none' : '1px solid var(--border-soft)',
                       }}
                     >
-                      {/* Icon */}
                       <div style={{
                         width: 36, height: 36, borderRadius: 9, flexShrink: 0,
                         background: `${meta.color}18`,
@@ -127,8 +136,6 @@ export default async function ActivitiesPage() {
                       }}>
                         {meta.icon}
                       </div>
-
-                      {/* Content */}
                       <div>
                         <div style={{ fontSize: 13.5, fontWeight: 500, lineHeight: 1.35 }}>
                           {a.title}
@@ -143,10 +150,7 @@ export default async function ActivitiesPage() {
                           {a.contact && (
                             <>
                               <span>·</span>
-                              <Link
-                                href={`/contacts/${a.contact.id}`}
-                                className="act-contact-link"
-                              >
+                              <Link href={`/contacts/${a.contact.id}`} className="act-contact-link">
                                 {a.contact.name}
                               </Link>
                             </>
@@ -161,8 +165,6 @@ export default async function ActivitiesPage() {
                           )}
                         </div>
                       </div>
-
-                      {/* Time */}
                       <div style={{ fontSize: 11.5, color: 'var(--muted-2)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                         {new Date(a.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                       </div>

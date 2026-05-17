@@ -10,13 +10,24 @@ const KIND_META: Record<string, { label: string; color: string; emoji: string }>
   note:    { label: 'Notas',    color: '#C0C0C8', emoji: '📝' },
 }
 
-export default async function InformeActividadesPage() {
+export default async function InformeActividadesPage({
+  searchParams,
+}: {
+  searchParams: { from?: string; to?: string }
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
+  const from = searchParams.from ?? ''
+  const to   = searchParams.to   ?? ''
+
+  let actQuery = supabase.from('activities').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+  if (from) actQuery = actQuery.gte('created_at', `${from}T00:00:00`)
+  if (to)   actQuery = actQuery.lte('created_at', `${to}T23:59:59`)
+
   const [{ data: rawActs }, { data: contacts }, { data: profile }] = await Promise.all([
-    supabase.from('activities').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+    actQuery,
     supabase.from('contacts').select('id, name, vertical').eq('user_id', user.id),
     supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
   ])
@@ -56,6 +67,9 @@ export default async function InformeActividadesPage() {
   const recent = list.slice(0, 12)
 
   const today = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const periodLabel = from || to
+    ? `${from || '—'} → ${to || 'hoy'}`
+    : 'Todo el historial'
   const authorName = profile?.full_name ?? user.email ?? '—'
   const authorRole = profile?.role ?? ''
 
@@ -82,7 +96,7 @@ export default async function InformeActividadesPage() {
         position: 'fixed', top: 20, right: 20, zIndex: 100,
         display: 'flex', gap: 10,
       }}>
-        <a href="/actividades" className="btn" style={{ display: 'inline-flex' }}>← Volver</a>
+        <a href={`/activities${from || to ? `?from=${from}&to=${to}` : ''}`} className="btn" style={{ display: 'inline-flex' }}>← Volver</a>
         <PrintButton />
       </div>
 
@@ -101,7 +115,10 @@ export default async function InformeActividadesPage() {
               Informe de Actividad Comercial
             </div>
             <div style={{ fontSize: 13, color: '#8A8A8F', marginTop: 6 }}>
-              Generado el {today} · {total} eventos registrados
+              Período: {periodLabel}
+            </div>
+            <div style={{ fontSize: 12, color: '#6A6A70', marginTop: 3 }}>
+              Generado el {today} · {total} eventos
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
