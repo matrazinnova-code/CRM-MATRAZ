@@ -75,6 +75,27 @@ export default async function ReportsPage() {
 
   const fmt = (v: number) => v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(2)}M` : `€${(v / 1000).toFixed(0)}K`
 
+  // Monthly breakdown (last 12 months with data)
+  const monthlyMap: Record<string, Record<string, number>> = {}
+  for (const a of acts) {
+    const d = new Date(a.created_at)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (!monthlyMap[key]) monthlyMap[key] = {}
+    monthlyMap[key][a.kind] = (monthlyMap[key][a.kind] ?? 0) + 1
+  }
+  const monthlyRows = Object.entries(monthlyMap)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, 12)
+    .map(([key, counts]) => {
+      const [year, month] = key.split('-')
+      const label = new Date(Number(year), Number(month) - 1, 1)
+        .toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+      const total = Object.values(counts).reduce((s, v) => s + v, 0)
+      return { label, counts, total }
+    })
+
+  const kindKeys = ['call', 'email', 'meeting', 'task', 'note']
+
   // Group recent activities by date
   const grouped = acts.slice(0, 30).reduce((acc, a) => {
     const day = new Date(a.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' })
@@ -202,6 +223,72 @@ export default async function ReportsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Monthly breakdown */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>Actividad mensual por tipo</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Número de interacciones registradas cada mes</div>
+        </div>
+
+        {monthlyRows.length === 0 ? (
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Sin actividades registradas.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '11px 22px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                    Mes
+                  </th>
+                  {kindKeys.map(k => (
+                    <th key={k} style={{ padding: '11px 16px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: KIND_META[k]?.color ?? 'var(--muted)', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                        {KIND_META[k]?.icon} {KIND_META[k]?.label}
+                      </span>
+                    </th>
+                  ))}
+                  <th style={{ padding: '11px 22px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyRows.map((row, i) => (
+                  <tr key={row.label} style={{ borderBottom: i < monthlyRows.length - 1 ? '1px solid var(--border-soft)' : 'none', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                    <td style={{ padding: '12px 22px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+                      {row.label}
+                    </td>
+                    {kindKeys.map(k => {
+                      const val = row.counts[k] ?? 0
+                      const color = KIND_META[k]?.color ?? 'var(--muted)'
+                      return (
+                        <td key={k} style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          {val > 0 ? (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              minWidth: 28, height: 24, borderRadius: 6,
+                              background: `${color}18`, color, fontWeight: 700, fontSize: 13,
+                              padding: '0 8px',
+                            }}>
+                              {val}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--muted-2)', fontSize: 12 }}>—</span>
+                          )}
+                        </td>
+                      )
+                    })}
+                    <td style={{ padding: '12px 22px', textAlign: 'center', fontWeight: 700, color: 'var(--teal)', fontVariantNumeric: 'tabular-nums' }}>
+                      {row.total}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Activity timeline */}
