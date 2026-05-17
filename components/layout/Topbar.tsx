@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { IcSearch, IcPlus, IcBell, IcCalendar, IcChevRight, IcUsers, IcBrief, IcBuilding, IcPhone, IcMail, IcVideo, IcMessage, IcCheck, IcDoc } from '@/components/ui/Icons'
 import { getRecentActivities } from '@/lib/actions'
 import { createClient } from '@/lib/supabase/client'
+import ChatDrawer from '@/components/chat/ChatDrawer'
 
 const BREADCRUMBS: Record<string, [string, string]> = {
   '/':           ['Workspace', 'Dashboard'],
@@ -34,6 +35,23 @@ export default function Topbar() {
   const [loading, setLoading] = useState(false)
   const wrapRef  = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Chat drawer
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatUnread, setChatUnread] = useState(0)
+
+  useEffect(() => {
+    const supabase = createClient()
+    async function fetchUnread() {
+      const { data } = await supabase.rpc('get_unread_count')
+      setChatUnread((data as number) ?? 0)
+    }
+    fetchUnread()
+    const ch = supabase.channel('topbar-unread')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, fetchUnread)
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [])
 
   // Notifications
   type Activity = Awaited<ReturnType<typeof getRecentActivities>>[number]
@@ -343,6 +361,30 @@ export default function Topbar() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Chat */}
+      <div style={{ position: 'relative' }}>
+        <button
+          className="icon-btn"
+          title="Chat"
+          onClick={() => setChatOpen(o => !o)}
+          style={{ width: 38, height: 38, background: chatOpen ? 'rgba(0,212,170,0.1)' : undefined, color: chatOpen ? 'var(--teal)' : undefined }}
+        >
+          <IcMessage size={16} />
+          {chatUnread > 0 && !chatOpen && (
+            <span style={{
+              position: 'absolute', top: 8, right: 8,
+              minWidth: 16, height: 16, borderRadius: 8,
+              background: 'var(--teal)', color: '#0a0a0b',
+              fontSize: 9, fontWeight: 700, display: 'grid', placeItems: 'center',
+              padding: '0 3px', boxShadow: '0 0 0 2px var(--bg)',
+            }}>
+              {chatUnread > 99 ? '99+' : chatUnread}
+            </span>
+          )}
+        </button>
+        <ChatDrawer open={chatOpen} onClose={() => setChatOpen(false)} />
       </div>
 
       {/* Calendar → Activities */}
