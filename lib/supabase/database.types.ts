@@ -76,6 +76,35 @@ export interface Activity {
   created_at: string
 }
 
+export interface Conversation {
+  id: string
+  type: 'direct' | 'group'
+  name: string | null
+  created_by: string | null
+  created_at: string
+  // joined
+  members?: ConversationMember[]
+  last_message?: Message | null
+}
+
+export interface ConversationMember {
+  conversation_id: string
+  user_id: string
+  joined_at: string
+  // joined
+  profile?: Profile | null
+}
+
+export interface Message {
+  id: string
+  conversation_id: string
+  sender_id: string
+  content: string
+  created_at: string
+  // joined
+  sender?: Profile | null
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -84,6 +113,9 @@ export interface Database {
       contacts: { Row: Contact; Insert: Partial<Contact>; Update: Partial<Contact> }
       deals: { Row: Deal; Insert: Partial<Deal>; Update: Partial<Deal> }
       activities: { Row: Activity; Insert: Partial<Activity>; Update: Partial<Activity> }
+      conversations: { Row: Conversation; Insert: Partial<Conversation>; Update: Partial<Conversation> }
+      conversation_members: { Row: ConversationMember; Insert: Partial<ConversationMember>; Update: Partial<ConversationMember> }
+      messages: { Row: Message; Insert: Partial<Message>; Update: Partial<Message> }
     }
   }
 }

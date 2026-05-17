@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   IcHome, IcUsers, IcKanban, IcBrief, IcCalendar,
-  IcChart, IcMail, IcCog, IcChevRight, IcLogout,
+  IcChart, IcMail, IcCog, IcChevRight, IcLogout, IcMessage,
 } from '@/components/ui/Icons'
 import { logout } from '@/lib/actions'
 import type { Profile } from '@/lib/supabase/database.types'
@@ -48,8 +48,9 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     { href: '/activities',icon: <IcCalendar size={16} />, label: 'Actividades' },
   ]
   const secondary = [
-    { href: '/reports',  icon: <IcChart size={16} />,  label: 'Reportes' },
-    { href: '/inbox',    icon: <IcMail size={16} />,   label: 'Inbox' },
+    { href: '/reports',  icon: <IcChart size={16} />,   label: 'Reportes' },
+    { href: '/inbox',    icon: <IcMail size={16} />,    label: 'Inbox' },
+    { href: '/chat',     icon: <IcMessage size={16} />, label: 'Chat' },
     { href: '/settings', icon: <IcCog size={16} />,    label: 'Ajustes' },
   ]
 
