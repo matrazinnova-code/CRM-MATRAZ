@@ -7,6 +7,7 @@ import {
   IcHome, IcUsers, IcKanban, IcBrief, IcCalendar,
   IcChart, IcMail, IcCog, IcChevRight, IcLogout, IcMessage,
 } from '@/components/ui/Icons'
+import ChatUnreadBadge from '@/components/chat/ChatUnreadBadge'
 import { logout } from '@/lib/actions'
 import type { Profile } from '@/lib/supabase/database.types'
 
@@ -101,9 +102,17 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         <div style={{ fontSize: 10, letterSpacing: '0.22em', color: 'var(--muted-2)', textTransform: 'uppercase', fontWeight: 600, padding: '0 12px 8px' }}>
           Operaciones
         </div>
-        {secondary.map((n) => (
-          <NavItem key={n.href} {...n} active={isActive(n.href)} />
-        ))}
+        {secondary.map((n) =>
+          n.href === '/chat' ? (
+            <Link key={n.href} href={n.href} className={`nav-item ${isActive(n.href) ? 'active' : ''}`}>
+              <span className="nav-icon">{n.icon}</span>
+              <span>{n.label}</span>
+              <ChatUnreadBadge />
+            </Link>
+          ) : (
+            <NavItem key={n.href} {...n} active={isActive(n.href)} />
+          )
+        )}
       </nav>
 
       {/* Footer */}

@@ -8,15 +8,13 @@ export async function createDirectConversation(otherUserId: string): Promise<str
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  // Check if direct conversation already exists between these two users
   const { data: existing } = await supabase.rpc('find_direct_conversation', {
     user_a: user.id,
     user_b: otherUserId,
-  }) as { data: string | null }
+  })
 
-  if (existing) return existing
+  if (existing) return existing as string
 
-  // Create new direct conversation
   const { data: conv, error } = await supabase
     .from('conversations')
     .insert({ type: 'direct', created_by: user.id })
@@ -69,4 +67,58 @@ export async function sendMessage(conversationId: string, content: string) {
     sender_id: user.id,
     content: content.trim(),
   })
+}
+
+export async function addGroupMember(
+  conversationId: string,
+  userId: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('created_by, type')
+    .eq('id', conversationId)
+    .single()
+
+  if (!conv || conv.type !== 'group') return { error: 'Conversación no válida' }
+  if (conv.created_by !== user.id) return { error: 'Solo el creador puede añadir miembros' }
+
+  const { error } = await supabase.from('conversation_members').insert({
+    conversation_id: conversationId,
+    user_id: userId,
+  })
+
+  revalidatePath(`/chat/${conversationId}`)
+  return { error: error?.message ?? null }
+}
+
+export async function removeGroupMember(
+  conversationId: string,
+  userId: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('created_by')
+    .eq('id', conversationId)
+    .single()
+
+  if (userId !== user.id && conv?.created_by !== user.id) {
+    return { error: 'Sin permiso para eliminar este miembro' }
+  }
+
+  await supabase
+    .from('conversation_members')
+    .delete()
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId)
+
+  revalidatePath(`/chat/${conversationId}`)
+  return { error: null }
 }
