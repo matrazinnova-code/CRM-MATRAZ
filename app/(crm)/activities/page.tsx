@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
-  IcSparkle, IcMail, IcPhone, IcCalendar, IcBrief, IcPlus,
+  IcSparkle, IcMail, IcPhone, IcCalendar, IcBrief, IcPlus, IcDoc,
 } from '@/components/ui/Icons'
 
 const KIND_META: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -56,9 +56,19 @@ export default async function ActivitiesPage() {
             {list.length} eventos registrados
           </div>
         </div>
-        <Link href="/contacts" className="btn primary" style={{ display: 'inline-flex' }}>
-          <IcPlus size={14} /> Nuevo registro
-        </Link>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <a
+            href="/api/export/activities"
+            download
+            className="btn"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          >
+            <IcDoc size={14} /> Exportar CSV
+          </a>
+          <Link href="/contacts" className="btn primary" style={{ display: 'inline-flex' }}>
+            <IcPlus size={14} /> Nuevo registro
+          </Link>
+        </div>
       </div>
 
       {list.length === 0 ? (
