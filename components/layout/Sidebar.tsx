@@ -67,20 +67,21 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     <aside className="sidebar">
       {/* Brand */}
       <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
         padding: '6px 8px 18px',
         borderBottom: '1px solid var(--border)',
       }}>
         <Image
           src="/assets/matraz-innova-logo.png"
           alt="Matraz Innova"
-          width={172}
-          height={48}
-          style={{ width: 172, height: 'auto', display: 'block' }}
+          width={148}
+          height={42}
+          style={{ width: 148, height: 'auto', display: 'block' }}
           priority
         />
-        <div style={{ fontSize: '9.5px', letterSpacing: '0.32em', color: 'var(--muted)', fontWeight: 500, paddingLeft: 2 }}>
-          CRM · v2.0
+        <div style={{ fontSize: '8.5px', letterSpacing: '0.18em', color: 'var(--muted-2)', fontWeight: 500, textAlign: 'center', lineHeight: 1.6 }}>
+          Life Sciences · People · Reaction
+          <span style={{ display: 'block', marginTop: 1, letterSpacing: '0.28em', color: 'var(--muted-2)', opacity: 0.6, fontSize: '7.5px' }}>v2.0</span>
         </div>
       </div>
 
