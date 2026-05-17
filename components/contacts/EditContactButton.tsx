@@ -20,7 +20,7 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
-export default function EditContactButton({ contact }: { contact: Contact }) {
+export default function EditContactButton({ contact, avatarMode }: { contact: Contact; avatarMode?: boolean }) {
   const [open, setOpen] = useState(false)
   const [name,     setName]     = useState(contact.name ?? '')
   const [role,     setRole]     = useState(contact.role ?? '')
@@ -53,13 +53,33 @@ export default function EditContactButton({ contact }: { contact: Contact }) {
 
   return (
     <>
-      <button
-        className="btn ghost"
-        style={{ height: 32, padding: '0 12px', fontSize: 12, marginLeft: 'auto' }}
-        onClick={() => setOpen(true)}
-      >
-        <IcEdit size={13} /> Editar
-      </button>
+      {avatarMode ? (
+        <button
+          onClick={() => setOpen(true)}
+          title="Editar contacto"
+          style={{
+            position: 'absolute', bottom: 0, right: -4,
+            width: 26, height: 26, borderRadius: '50%',
+            background: 'var(--surface-2)', border: '2px solid var(--bg)',
+            display: 'grid', placeItems: 'center',
+            cursor: 'pointer', color: 'var(--teal)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+            transition: 'transform 120ms',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.15)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        >
+          <IcEdit size={12} />
+        </button>
+      ) : (
+        <button
+          className="btn ghost"
+          style={{ height: 32, padding: '0 12px', fontSize: 12, marginLeft: 'auto' }}
+          onClick={() => setOpen(true)}
+        >
+          <IcEdit size={13} /> Editar
+        </button>
+      )}
 
       {open && (
         <div style={{

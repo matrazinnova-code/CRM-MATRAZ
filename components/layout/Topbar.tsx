@@ -88,13 +88,14 @@ export default function Topbar() {
     setOpen(true)
     timerRef.current = setTimeout(async () => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      const uid = session?.user?.id
+      if (!uid) { setLoading(false); return }
       const q = val.trim()
       const [{ data: contacts }, { data: deals }, { data: companies }] = await Promise.all([
-        supabase.from('contacts').select('id, name, role, vertical').eq('user_id', user.id).ilike('name', `%${q}%`).limit(5),
-        supabase.from('deals').select('id, title, value, stage').eq('user_id', user.id).ilike('title', `%${q}%`).limit(5),
-        supabase.from('companies').select('id, name, industry').eq('user_id', user.id).ilike('name', `%${q}%`).limit(5),
+        supabase.from('contacts').select('id, name, role, vertical').eq('user_id', uid).ilike('name', `%${q}%`).limit(5),
+        supabase.from('deals').select('id, title, value, stage').eq('user_id', uid).ilike('title', `%${q}%`).limit(5),
+        supabase.from('companies').select('id, name, industry').eq('user_id', uid).ilike('name', `%${q}%`).limit(5),
       ])
       setResults({ contacts: contacts ?? [], deals: deals ?? [], companies: companies ?? [] })
       setLoading(false)

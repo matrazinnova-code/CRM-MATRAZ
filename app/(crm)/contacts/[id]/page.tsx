@@ -61,16 +61,17 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
         <div>
           {/* Contact card */}
           <div className="card" style={{ padding: 22 }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-              <EditContactButton contact={c} />
-            </div>
-            <div style={{
-              width: 76, height: 76, borderRadius: '50%', margin: '0 auto 14px',
-              display: 'grid', placeItems: 'center',
-              fontWeight: 800, fontSize: 26, letterSpacing: '0.01em',
-              background: 'var(--gradient)', color: '#0A0A0B',
-            }}>
-              {initials}
+            {/* Avatar with edit overlay */}
+            <div style={{ position: 'relative', width: 76, margin: '0 auto 14px' }}>
+              <div style={{
+                width: 76, height: 76, borderRadius: '50%',
+                display: 'grid', placeItems: 'center',
+                fontWeight: 800, fontSize: 26, letterSpacing: '0.01em',
+                background: 'var(--gradient)', color: '#0A0A0B',
+              }}>
+                {initials}
+              </div>
+              <EditContactButton contact={c} avatarMode />
             </div>
             <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 700, letterSpacing: '-0.015em' }}>{c.name}</div>
             <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>{c.role ?? '—'}</div>
