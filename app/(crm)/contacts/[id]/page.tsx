@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { computeAndSaveLeadScore } from '@/lib/actions'
 import Timeline from '@/components/contacts/Timeline'
 import EditContactButton from '@/components/contacts/EditContactButton'
 import { VerticalBadge, StatusBadge } from '@/components/ui/Badge'
@@ -35,8 +36,11 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
 
   if (!contact) notFound()
 
+  // Recalculate and save lead score on every page visit
+  const { score: freshScore } = await computeAndSaveLeadScore(params.id)
+
   const c = contact as Contact
-  const leadScore = c.lead_score ?? 0
+  const leadScore = freshScore ?? c.lead_score ?? 0
   const pipelineValue = c.pipeline_value ?? 0
   const initials = (c.name ?? '?').split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join('')
   const linkedinSlug = (c.name ?? '').toLowerCase().replace(/\s+/g, '-')
@@ -115,14 +119,41 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
           {/* Lead score */}
           <div className="card" style={{ marginTop: 16, padding: 22 }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 600, marginBottom: 12 }}>
-              Lead Score
+              Lead Score · automático
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <div className="gradient-text" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1 }}>{leadScore}</div>
-              <div style={{ color: 'var(--muted)', fontSize: 12 }}>/ 100 · {leadScore >= 70 ? 'alto' : leadScore >= 40 ? 'medio' : 'bajo'}</div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>/ 100 · {leadScore >= 70 ? '🔥 alto' : leadScore >= 40 ? '⚡ medio' : '❄️ bajo'}</div>
             </div>
             <div style={{ height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 99, marginTop: 12, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${leadScore}%`, background: 'var(--gradient)', borderRadius: 99 }} />
+              <div style={{
+                height: '100%', width: `${leadScore}%`, borderRadius: 99,
+                background: leadScore >= 70 ? 'var(--gradient)' : leadScore >= 40 ? 'linear-gradient(90deg,#7B5FFF,#00B4D8)' : 'linear-gradient(90deg,#6A6A70,#8A8A8F)',
+              }} />
+            </div>
+            {/* Score breakdown */}
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {[
+                { label: 'Email registrado',     pts: 15, has: !!c.email },
+                { label: 'Teléfono registrado',  pts: 10, has: !!c.phone },
+                { label: 'Ciudad registrada',    pts: 5,  has: !!c.city },
+                { label: 'Empresa asociada',     pts: 5,  has: !!c.company_id },
+                { label: 'Estado prospect/customer', pts: 30, has: c.status !== 'lead' },
+                { label: 'Deals activos',        pts: 10, has: (deals ?? []).some((d: Deal) => d.stage !== 'won' && d.stage !== 'lost') },
+                { label: 'Deal en negociación',  pts: 5,  has: (deals ?? []).some((d: Deal) => d.stage === 'negotiation' || d.stage === 'closing') },
+                { label: 'Deal ganado',          pts: 5,  has: (deals ?? []).some((d: Deal) => d.stage === 'won') },
+                { label: 'Actividades registradas', pts: 15, has: (activities ?? []).length >= 1 },
+              ].map((item) => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5 }}>
+                  <span style={{ color: item.has ? 'var(--teal)' : 'var(--muted-2)', fontSize: 12 }}>
+                    {item.has ? '✓' : '○'}
+                  </span>
+                  <span style={{ flex: 1, color: item.has ? '#fff' : 'var(--muted-2)' }}>{item.label}</span>
+                  <span style={{ color: item.has ? 'var(--teal)' : 'var(--muted-2)', fontWeight: 600 }}>
+                    +{item.pts}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 

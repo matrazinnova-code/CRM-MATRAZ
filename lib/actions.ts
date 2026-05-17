@@ -220,6 +220,60 @@ export async function deleteDeal(id: string) {
   return { success: true }
 }
 
+// ── LEAD SCORE ────────────────────────────────────────────────────────────────
+
+export async function computeAndSaveLeadScore(contactId: string) {
+  const supabase = await createClient()
+
+  const [{ data: contact }, { data: activities }, { data: deals }] = await Promise.all([
+    supabase.from('contacts').select('*').eq('id', contactId).single(),
+    supabase.from('activities').select('id, created_at').eq('contact_id', contactId),
+    supabase.from('deals').select('id, stage, value').eq('contact_id', contactId),
+  ])
+
+  if (!contact) return { error: 'Contact not found' }
+
+  let score = 0
+
+  // Datos de perfil (max 30)
+  if (contact.email)   score += 15
+  if (contact.phone)   score += 10
+  if (contact.city)    score += 5
+
+  // Estado (max 30)
+  if (contact.status === 'prospect') score += 15
+  if (contact.status === 'customer') score += 30
+
+  // Empresa asociada (max 5)
+  if (contact.company_id) score += 5
+
+  // Deals (max 20)
+  const activeDeals = (deals ?? []).filter(d => d.stage !== 'won' && d.stage !== 'lost')
+  const wonDeals    = (deals ?? []).filter(d => d.stage === 'won')
+  const hotDeals    = (deals ?? []).filter(d => d.stage === 'negotiation' || d.stage === 'closing')
+  if (activeDeals.length > 0) score += Math.min(activeDeals.length * 5, 10)
+  if (hotDeals.length > 0)    score += 5
+  if (wonDeals.length > 0)    score += 5
+
+  // Actividades (max 15)
+  const actCount = (activities ?? []).length
+  if (actCount >= 1) score += 5
+  if (actCount >= 3) score += 5
+  if (actCount >= 6) score += 5
+
+  // Actividad reciente último mes (bonus)
+  const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString()
+  const recentAct = (activities ?? []).some(a => a.created_at > monthAgo)
+  if (recentAct) score += 5
+
+  score = Math.min(score, 100)
+
+  await supabase.from('contacts').update({ lead_score: score }).eq('id', contactId)
+  revalidatePath(`/contacts/${contactId}`)
+
+  return { score }
+}
+
 // ── SEARCH ────────────────────────────────────────────────────────────────────
 
 export async function searchAll(query: string) {
