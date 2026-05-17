@@ -57,6 +57,9 @@ export default async function ActivitiesPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
+          <Link href="/actividades/informe" className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <IcDoc size={14} /> Ver informe
+          </Link>
           <a
             href="/api/export/activities"
             download
