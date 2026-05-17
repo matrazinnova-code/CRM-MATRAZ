@@ -83,15 +83,55 @@ export default async function ReportsPage() {
     if (!monthlyMap[key]) monthlyMap[key] = {}
     monthlyMap[key][a.kind] = (monthlyMap[key][a.kind] ?? 0) + 1
   }
+  // KPI targets
+  const KPI_CALLS_PER_DAY = 80
+  const KPI_MEETINGS_PER_WEEK = 5
+
+  function workingDaysInPeriod(year: number, month: number): { total: number; elapsed: number } {
+    const today = new Date()
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month
+    const lastDay = isCurrentMonth ? today.getDate() : new Date(year, month, 0).getDate()
+    let total = 0, elapsed = 0
+    for (let d = 1; d <= new Date(year, month, 0).getDate(); d++) {
+      const dow = new Date(year, month - 1, d).getDay()
+      if (dow >= 1 && dow <= 5) {
+        total++
+        if (d <= lastDay) elapsed++
+      }
+    }
+    return { total, elapsed }
+  }
+
   const monthlyRows = Object.entries(monthlyMap)
     .sort(([a], [b]) => b.localeCompare(a))
     .slice(0, 12)
     .map(([key, counts]) => {
       const [year, month] = key.split('-')
-      const label = new Date(Number(year), Number(month) - 1, 1)
-        .toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+      const y = Number(year), m = Number(month)
+      const label = new Date(y, m - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
       const total = Object.values(counts).reduce((s, v) => s + v, 0)
-      return { label, counts, total }
+
+      const { total: wdTotal, elapsed: wdElapsed } = workingDaysInPeriod(y, m)
+      const isCurrentMonth = new Date().getFullYear() === y && new Date().getMonth() + 1 === m
+      const activeDays = isCurrentMonth ? wdElapsed : wdTotal
+
+      const callTarget    = KPI_CALLS_PER_DAY * activeDays
+      const meetingTarget = Math.round(KPI_MEETINGS_PER_WEEK * (activeDays / 5))
+
+      const calls    = counts['call']    ?? 0
+      const meetings = counts['meeting'] ?? 0
+
+      const callPct    = callTarget    > 0 ? Math.min(Math.round((calls    / callTarget)    * 100), 100) : 0
+      const meetingPct = meetingTarget > 0 ? Math.min(Math.round((meetings / meetingTarget) * 100), 100) : 0
+
+      const callOk    = callPct    >= 100
+      const meetingOk = meetingPct >= 100
+
+      return {
+        label, counts, total, isCurrentMonth,
+        callTarget, meetingTarget, calls, meetings,
+        callPct, meetingPct, callOk, meetingOk,
+      }
     })
 
   const kindKeys = ['call', 'email', 'meeting', 'task', 'note']
@@ -249,16 +289,26 @@ export default async function ReportsPage() {
                       </span>
                     </th>
                   ))}
-                  <th style={{ padding: '11px 22px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                  <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
                     Total
+                  </th>
+                  <th style={{ padding: '11px 22px', textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#F59E0B', whiteSpace: 'nowrap' }}>
+                    KPI mensual
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {monthlyRows.map((row, i) => (
+                {monthlyRows.map((row, i) => {
+                  const bothOk  = row.callOk && row.meetingOk
+                  const noneOk  = !row.callOk && !row.meetingOk
+                  const kpiColor = bothOk ? '#00D4AA' : noneOk ? '#E040A0' : '#F59E0B'
+                  const kpiLabel = bothOk ? '✅ Cumplido' : noneOk ? '❌ No cumplido' : '⚠️ Parcial'
+
+                  return (
                   <tr key={row.label} style={{ borderBottom: i < monthlyRows.length - 1 ? '1px solid var(--border-soft)' : 'none', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
                     <td style={{ padding: '12px 22px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
                       {row.label}
+                      {row.isCurrentMonth && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--teal)', fontWeight: 700, letterSpacing: '0.1em' }}>EN CURSO</span>}
                     </td>
                     {kindKeys.map(k => {
                       const val = row.counts[k] ?? 0
@@ -280,11 +330,45 @@ export default async function ReportsPage() {
                         </td>
                       )
                     })}
-                    <td style={{ padding: '12px 22px', textAlign: 'center', fontWeight: 700, color: 'var(--teal)', fontVariantNumeric: 'tabular-nums' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 700, color: 'var(--teal)', fontVariantNumeric: 'tabular-nums' }}>
                       {row.total}
                     </td>
+                    <td style={{ padding: '12px 22px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 180 }}>
+                        {/* Badge */}
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          padding: '3px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 700,
+                          background: `${kpiColor}18`, color: kpiColor, border: `1px solid ${kpiColor}30`,
+                          alignSelf: 'flex-start',
+                        }}>
+                          {kpiLabel}
+                        </span>
+                        {/* Call KPI bar */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--muted)', marginBottom: 3 }}>
+                            <span>📞 Llamadas</span>
+                            <span style={{ color: row.callOk ? '#00D4AA' : '#fff' }}>{row.calls} / {row.callTarget}</span>
+                          </div>
+                          <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${row.callPct}%`, borderRadius: 99, background: row.callOk ? '#00D4AA' : row.callPct >= 70 ? '#F59E0B' : '#E040A0' }} />
+                          </div>
+                        </div>
+                        {/* Meeting KPI bar */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--muted)', marginBottom: 3 }}>
+                            <span>🤝 Reuniones</span>
+                            <span style={{ color: row.meetingOk ? '#00D4AA' : '#fff' }}>{row.meetings} / {row.meetingTarget}</span>
+                          </div>
+                          <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${row.meetingPct}%`, borderRadius: 99, background: row.meetingOk ? '#00D4AA' : row.meetingPct >= 70 ? '#F59E0B' : '#E040A0' }} />
+                          </div>
+                        </div>
+                      </div>
+                    </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
