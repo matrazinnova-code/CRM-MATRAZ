@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   IcHome, IcUsers, IcKanban, IcBrief, IcCalendar,
-  IcChart, IcMail, IcCog, IcChevRight, IcLogout, IcMessage,
+  IcChart, IcMail, IcCog, IcChevRight, IcLogout, IcMessage, IcTarget,
 } from '@/components/ui/Icons'
 import ChatUnreadBadge from '@/components/chat/ChatUnreadBadge'
 import { logout } from '@/lib/actions'
@@ -53,6 +53,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     { href: '/inbox',    icon: <IcMail size={16} />,    label: 'Inbox' },
     { href: '/chat',     icon: <IcMessage size={16} />, label: 'Chat' },
     { href: '/settings', icon: <IcCog size={16} />,    label: 'Ajustes' },
+    ...(profile?.is_admin ? [{ href: '/admin', icon: <IcTarget size={16} />, label: 'Admin' }] : []),
   ]
 
   const isActive = (href: string) => {
