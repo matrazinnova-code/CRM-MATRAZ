@@ -52,8 +52,8 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     { href: '/reports',  icon: <IcChart size={16} />,   label: 'Reportes' },
     { href: '/inbox',    icon: <IcMail size={16} />,    label: 'Inbox' },
     { href: '/chat',     icon: <IcMessage size={16} />, label: 'Chat' },
+    ...(profile?.is_admin ? [{ href: '/admin', icon: <IcTarget size={16} />, label: 'Backoffice' }] : []),
     { href: '/settings', icon: <IcCog size={16} />,    label: 'Ajustes' },
-    ...(profile?.is_admin ? [{ href: '/admin', icon: <IcTarget size={16} />, label: 'Admin' }] : []),
   ]
 
   const isActive = (href: string) => {

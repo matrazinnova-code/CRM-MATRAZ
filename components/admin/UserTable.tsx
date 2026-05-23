@@ -36,6 +36,30 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
   const [error, setError] = useState('')
   const router = useRouter()
 
+  // Password change state
+  const [setPasswordFor, setSetPasswordFor] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [pwPending, setPwPending] = useState(false)
+  const [pwSuccess, setPwSuccess] = useState<string | null>(null)
+
+  async function handleSetPassword(id: string) {
+    if (newPassword.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return }
+    setPwPending(true)
+    const res = await fetch(`/api/admin/users/${id}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: newPassword }),
+    })
+    setPwPending(false)
+    if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error'); return }
+    setSetPasswordFor(null)
+    setNewPassword('')
+    setShowPassword(false)
+    setPwSuccess(id)
+    setTimeout(() => setPwSuccess(null), 3000)
+  }
+
   async function handleDelete(id: string) {
     startTransition(async () => {
       const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
@@ -87,7 +111,7 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Usuario', 'Email', 'Rol', 'Alta', 'Último acceso', 'Datos', 'Admin', 'Acciones'].map(h => (
+              {['Usuario', 'Email', 'Rol', 'Alta', 'Último acceso', 'Datos', 'Admin', 'Contraseña', 'Acciones'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                   {h}
                 </th>
@@ -182,6 +206,65 @@ export default function UserTable({ initialUsers, currentUserId }: { initialUser
                     </button>
                   ) : (
                     <span style={{ fontSize: 11, color: 'var(--teal)', fontWeight: 600 }}>Super</span>
+                  )}
+                </td>
+
+                {/* Contraseña */}
+                <td style={{ padding: '12px 16px' }}>
+                  {setPasswordFor === u.id ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleSetPassword(u.id)}
+                          placeholder="Nueva contraseña"
+                          autoFocus
+                          style={{
+                            background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)',
+                            borderRadius: 6, color: '#fff', fontSize: 12, padding: '4px 28px 4px 8px',
+                            width: 160, outline: 'none',
+                          }}
+                        />
+                        <button
+                          onClick={() => setShowPassword(s => !s)}
+                          style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 13, lineHeight: 1 }}
+                          title={showPassword ? 'Ocultar' : 'Ver contraseña'}
+                        >
+                          {showPassword ? '🙈' : '👁'}
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => handleSetPassword(u.id)}
+                        disabled={pwPending || newPassword.length < 8}
+                        style={{ fontSize: 11, padding: '4px 10px', borderRadius: 5, border: 'none', background: 'var(--teal)', color: '#0a0a0b', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        {pwPending ? '…' : 'Guardar'}
+                      </button>
+                      <button
+                        onClick={() => { setSetPasswordFor(null); setNewPassword(''); setShowPassword(false) }}
+                        style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, border: 'none', background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', cursor: 'pointer' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 13, letterSpacing: '0.1em', color: 'var(--muted)' }}>••••••••</span>
+                      {u.id !== currentUserId && (
+                        <button
+                          onClick={() => { setSetPasswordFor(u.id); setNewPassword(''); setShowPassword(false) }}
+                          style={{ fontSize: 11, padding: '2px 8px', borderRadius: 5, border: '1px solid var(--border)', background: 'none', color: 'var(--muted)', cursor: 'pointer' }}
+                          title="Cambiar contraseña"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                      {pwSuccess === u.id && (
+                        <span style={{ fontSize: 11, color: 'var(--teal)', fontWeight: 600 }}>✓ Guardada</span>
+                      )}
+                    </div>
                   )}
                 </td>
 
