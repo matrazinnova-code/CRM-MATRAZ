@@ -22,18 +22,22 @@ export default async function InformeActividadesPage({
   const from = searchParams.from ?? ''
   const to   = searchParams.to   ?? ''
 
-  let actQuery = supabase.from('activities').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-  if (from) actQuery = actQuery.gte('created_at', `${from}T00:00:00`)
-  if (to)   actQuery = actQuery.lte('created_at', `${to}T23:59:59`)
-
   const [{ data: rawActs }, { data: contacts }, { data: profile }] = await Promise.all([
-    actQuery,
+    supabase
+      .from('activities')
+      .select('*')
+      .eq('user_id', user.id)
+      .gte('created_at', from ? `${from}T00:00:00` : '1970-01-01T00:00:00')
+      .lte('created_at', to   ? `${to}T23:59:59`   : '9999-12-31T23:59:59')
+      .order('created_at', { ascending: false }),
     supabase.from('contacts').select('id, name, vertical').eq('user_id', user.id),
     supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
   ])
 
-  const acts = rawActs ?? []
-  type ContactRow = { id: string; name: string; vertical: string }
+  type ActivityRow = NonNullable<typeof rawActs>[number]
+  type ContactRow  = { id: string; name: string; vertical: string }
+
+  const acts = (rawActs ?? []) as ActivityRow[]
   const contactMap = Object.fromEntries(((contacts ?? []) as ContactRow[]).map(c => [c.id, c]))
 
   const list = acts.map(a => ({ ...a, contact: a.contact_id ? (contactMap[a.contact_id] ?? null) : null }))
