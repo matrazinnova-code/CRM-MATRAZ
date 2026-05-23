@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import SettingsForm from '@/components/settings/SettingsForm'
 import PasswordForm from '@/components/settings/PasswordForm'
+import MfaForm from '@/components/settings/MfaForm'
 
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -47,8 +48,13 @@ export default async function SettingsPage() {
       </Section>
 
       {/* Password */}
-      <Section title="Seguridad" subtitle="Actualiza tu contraseña de acceso">
+      <Section title="Contraseña" subtitle="Actualiza tu contraseña de acceso">
         <PasswordForm />
+      </Section>
+
+      {/* 2FA */}
+      <Section title="Autenticación en dos pasos (2FA)" subtitle="Protege tu cuenta con un código adicional al iniciar sesión">
+        <MfaForm />
       </Section>
 
       {/* Account info (read-only) */}

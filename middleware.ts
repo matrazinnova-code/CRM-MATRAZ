@@ -32,9 +32,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect to dashboard if authenticated and accessing auth routes
+  // Redirect to dashboard if authenticated and accessing auth routes (except /mfa)
   if (user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
     return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Enforce MFA second factor for enrolled users
+  if (user && !pathname.startsWith('/mfa')) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (aal?.nextLevel === 'aal2' && aal?.currentLevel === 'aal1') {
+      return NextResponse.redirect(new URL('/mfa', request.url))
+    }
   }
 
   return supabaseResponse
