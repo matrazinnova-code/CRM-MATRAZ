@@ -36,10 +36,11 @@ export default async function InformeActividadesPage({
   ])
 
   type ContactRow = { id: string; name: string; vertical: string }
+  type ProfileRow = { full_name: string | null; role: string | null }
 
-  const acts = (actsRes.data ?? []) as Activity[]
+  const acts     = (actsRes.data     ?? []) as Activity[]
   const contacts = (contactsRes.data ?? []) as ContactRow[]
-  const profile = profileRes.data
+  const profile  = profileRes.data as ProfileRow | null
 
   const contactMap = Object.fromEntries(contacts.map(c => [c.id, c]))
 
