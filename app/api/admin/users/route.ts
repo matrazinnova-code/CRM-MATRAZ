@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 async function verifyAdmin() {
   const supabase = await createClient()
@@ -11,7 +12,10 @@ async function verifyAdmin() {
   return user
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
+  if (!rateLimit(`admin-users:${ip}`, 30, 60_000)) return rateLimitResponse()
+
   const caller = await verifyAdmin()
   if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 

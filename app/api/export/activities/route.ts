@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 const KIND_LABEL: Record<string, string> = {
   call: 'Llamada',
@@ -12,13 +13,18 @@ const KIND_LABEL: Record<string, string> = {
 function escapeCsv(value: string | null | undefined): string {
   if (value == null) return ''
   const str = String(value)
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`
+  // Prefix formula injection chars so Excel/Sheets don't evaluate them
+  const safe = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str
+  if (safe.includes(',') || safe.includes('"') || safe.includes('\n')) {
+    return `"${safe.replace(/"/g, '""')}"`
   }
-  return str
+  return safe
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
+  if (!rateLimit(`export:${ip}`, 10, 60_000)) return rateLimitResponse()
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

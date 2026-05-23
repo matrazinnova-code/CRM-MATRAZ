@@ -35,8 +35,8 @@ export default function PasswordForm() {
     setError(null)
     setSuccess(false)
 
-    if (newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    if (newPassword.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres')
       return
     }
     if (newPassword !== confirm) {
@@ -54,6 +54,9 @@ export default function PasswordForm() {
       return
     }
 
+    // Invalidate all other active sessions after password change
+    await supabase.auth.signOut({ scope: 'others' })
+
     setSuccess(true)
     setNewPassword('')
     setConfirm('')
@@ -68,7 +71,7 @@ export default function PasswordForm() {
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="Mínimo 6 caracteres"
+          placeholder="Mínimo 8 caracteres"
           autoComplete="new-password"
         />
       </Field>

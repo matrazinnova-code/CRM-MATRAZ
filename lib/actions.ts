@@ -18,9 +18,19 @@ export async function login(_: unknown, formData: FormData) {
 
 export async function register(_: unknown, formData: FormData) {
   const supabase = await createClient()
-  const email = formData.get('email') as string
+  const email = (formData.get('email') as string)?.trim().toLowerCase()
   const password = formData.get('password') as string
-  const full_name = formData.get('full_name') as string
+  const full_name = (formData.get('full_name') as string)?.trim()
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: 'Email inválido' }
+  }
+  if (!password || password.length < 8) {
+    return { error: 'La contraseña debe tener al menos 8 caracteres' }
+  }
+  if (!full_name || full_name.length < 2 || full_name.length > 100) {
+    return { error: 'Nombre inválido' }
+  }
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -123,7 +133,14 @@ export async function updateContact(id: string, data: Partial<{
   company_id: string
 }>) {
   const supabase = await createClient()
-  const { error } = await supabase.from('contacts').update(data).eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('contacts')
+    .update(data)
+    .eq('id', id)
+    .eq('user_id', user.id)
   if (error) return { error: error.message }
   revalidatePath('/contacts')
   revalidatePath(`/contacts/${id}`)
@@ -132,7 +149,14 @@ export async function updateContact(id: string, data: Partial<{
 
 export async function deleteContact(id: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('contacts').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('contacts')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
   if (error) return { error: error.message }
   revalidatePath('/contacts')
   return { success: true }
@@ -195,7 +219,14 @@ export async function updateDeal(id: string, data: Partial<{
   company_id: string
 }>) {
   const supabase = await createClient()
-  const { error } = await supabase.from('deals').update(data).eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('deals')
+    .update(data)
+    .eq('id', id)
+    .eq('user_id', user.id)
   if (error) return { error: error.message }
   revalidatePath('/pipeline')
   return { success: true }
@@ -203,10 +234,14 @@ export async function updateDeal(id: string, data: Partial<{
 
 export async function moveDeal(id: string, stage: DealStage, position: number) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
   const { error } = await supabase
     .from('deals')
     .update({ stage, position })
     .eq('id', id)
+    .eq('user_id', user.id)
   if (error) return { error: error.message }
   revalidatePath('/pipeline')
   return { success: true }
@@ -214,7 +249,14 @@ export async function moveDeal(id: string, stage: DealStage, position: number) {
 
 export async function deleteDeal(id: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('deals').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('deals')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
   if (error) return { error: error.message }
   revalidatePath('/pipeline')
   return { success: true }
@@ -351,7 +393,14 @@ export async function createActivity(data: {
 
 export async function deleteActivity(id: string, contactId?: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('activities').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('activities')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
   if (error) return { error: error.message }
   if (contactId) revalidatePath(`/contacts/${contactId}`)
   return { success: true }
