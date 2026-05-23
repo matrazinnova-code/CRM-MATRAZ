@@ -22,7 +22,7 @@ export default async function InformeActividadesPage({
   const from = searchParams.from ?? ''
   const to   = searchParams.to   ?? ''
 
-  const [{ data: rawActs }, { data: contacts }, { data: profile }] = await Promise.all([
+  const [actsRes, contactsRes, profileRes] = await Promise.all([
     supabase
       .from('activities')
       .select('*')
@@ -34,11 +34,13 @@ export default async function InformeActividadesPage({
     supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
   ])
 
-  type ActivityRow = NonNullable<typeof rawActs>[number]
-  type ContactRow  = { id: string; name: string; vertical: string }
+  type ContactRow = { id: string; name: string; vertical: string }
 
-  const acts = (rawActs ?? []) as ActivityRow[]
-  const contactMap = Object.fromEntries(((contacts ?? []) as ContactRow[]).map(c => [c.id, c]))
+  const acts = actsRes.data ?? []
+  const contacts = (contactsRes.data ?? []) as ContactRow[]
+  const profile = profileRes.data
+
+  const contactMap = Object.fromEntries(contacts.map(c => [c.id, c]))
 
   const list = acts.map(a => ({ ...a, contact: a.contact_id ? (contactMap[a.contact_id] ?? null) : null }))
 
