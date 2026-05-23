@@ -33,7 +33,8 @@ export default async function InformeActividadesPage({
   ])
 
   const acts = rawActs ?? []
-  const contactMap = Object.fromEntries((contacts ?? []).map(c => [c.id, c]))
+  type ContactRow = { id: string; name: string; vertical: string }
+  const contactMap = Object.fromEntries(((contacts ?? []) as ContactRow[]).map(c => [c.id, c]))
 
   const list = acts.map(a => ({ ...a, contact: a.contact_id ? (contactMap[a.contact_id] ?? null) : null }))
 
