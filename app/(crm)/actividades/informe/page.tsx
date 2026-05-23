@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import type { Activity } from '@/lib/supabase/database.types'
 import PrintButton from './PrintButton'
 
 const KIND_META: Record<string, { label: string; color: string; emoji: string }> = {
@@ -36,7 +37,7 @@ export default async function InformeActividadesPage({
 
   type ContactRow = { id: string; name: string; vertical: string }
 
-  const acts = actsRes.data ?? []
+  const acts = (actsRes.data ?? []) as Activity[]
   const contacts = (contactsRes.data ?? []) as ContactRow[]
   const profile = profileRes.data
 
